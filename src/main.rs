@@ -84,8 +84,7 @@ fn main() {
     for log_match in results.results {
         println!("name: {}", log_match.name);
         for payload in log_match.matches {
-            print!("{} ", payload);
+            println!("{} ", payload.join(" "));
         }
-        println!("\n");
     }
 }

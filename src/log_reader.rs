@@ -8,10 +8,10 @@ pub struct LogResults {
 
 pub struct LogMatch {
     pub name: String,
-    pub matches: Vec<String>
+    pub matches: Vec<Vec<String>>
 }
 
-fn extract_payload(log_line: &str, payload: &Vec<String>) -> Vec<String> {
+fn extract_payload_from_line(log_line: &str, payload: &Vec<String>) -> Vec<String> {
     let mut payload_results = vec!();
 
     for payload_item in payload {
@@ -29,8 +29,8 @@ fn execute_step(config_step: &ConfigStep, log_file: &Vec<&str>) -> LogMatch {
     let config_identifier_regex = Regex::new(&config_step.identifier).unwrap();
     for line in log_file {
         if config_identifier_regex.is_match(line) {
-            let mut new_matches = extract_payload(line, &config_step.payload);
-            all_matches.append(&mut new_matches);
+            let mut new_matches = extract_payload_from_line(line, &config_step.payload);
+            all_matches.push(new_matches);
         }
     }
 
