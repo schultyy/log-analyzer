@@ -3,6 +3,8 @@ extern crate clap;
 extern crate serde;
 extern crate serde_json;
 
+mod config;
+
 use clap::{Arg, App, SubCommand};
 
 fn main() {
@@ -22,6 +24,11 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("config") {
         if matches.is_present("validate") {
             println!("Validating config file...");
+            let filename = matches.value_of("validate").unwrap();
+            match config::read_config_from_file(filename) {
+                Ok(_) => println!("config valid"),
+                Err(err) => println!("{:?}", err)
+            }
         }
     }
 }
