@@ -3,6 +3,7 @@ use regex::Regex;
 
 #[derive(Debug)]
 pub struct LogEvent {
+    pub date: String,
     pub context_identifier: String,
     pub name: String,
     pub payload: Vec<String>
@@ -31,11 +32,19 @@ fn extract_payload(log_line: &str, config_step: &ConfigStep) -> Vec<String> {
     collected_payload
 }
 
-fn match_step_identifier(context_value: String, log_line: &str, config_file: &ConfigFile) -> Option<LogEvent> {
+fn extract_date(date_identifier: &Regex, log_line: &str) -> String {
+    for capture in date_identifier.captures_iter(log_line) {
+        return capture[1].to_string()
+    }
+    String::new()
+}
+
+fn match_step_identifier(date_identifier: &Regex, context_value: String, log_line: &str, config_file: &ConfigFile) -> Option<LogEvent> {
     for config_file_step in config_file.steps.iter() {
         let regex = Regex::new(&config_file_step.identifier).unwrap();
         if regex.is_match(log_line) {
             return Some(LogEvent {
+                date: extract_date(date_identifier, log_line),
                 context_identifier: context_value,
                 name: config_file_step.name.clone(),
                 payload: extract_payload(log_line, &config_file_step)
@@ -49,10 +58,11 @@ pub fn extract(config_file: ConfigFile, log_file: String) -> Vec<LogEvent> {
     let mut log_events = Vec::new();
     let log_file_lines = log_file.split("\n");
     let compiled_context_expressions = config_file.context_arguments.iter().map(|context| Regex::new(&context).unwrap()).collect();
+    let date_identifier = Regex::new(&config_file.date_identifier).unwrap();
 
     for log_line in log_file_lines {
         if let Some(context_value) = matches_context_argument(&log_line, &compiled_context_expressions) {
-            if let Some(payload) = match_step_identifier(context_value, log_line, &config_file) {
+            if let Some(payload) = match_step_identifier(&date_identifier, context_value, log_line, &config_file) {
                 log_events.push(payload);
             }
         }

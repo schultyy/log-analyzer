@@ -8,6 +8,7 @@ use serde_json;
 pub struct ConfigFile {
     pub name: String,
     pub context_arguments: Vec<String>,
+    pub date_identifier: String,
     pub steps: Vec<ConfigStep>
 }
 
