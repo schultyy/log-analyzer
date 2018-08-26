@@ -7,6 +7,7 @@ use serde_json;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigFile {
     pub name: String,
+    pub context_arguments: Vec<String>,
     pub steps: Vec<ConfigStep>
 }
 

@@ -77,14 +77,6 @@ fn main() {
         }
     };
 
-    let results = log_reader::extract(config_file, file);
-
-    println!("Results: ");
-    println!("Name: {}", results.name);
-    for log_match in results.results {
-        println!("name: {}", log_match.name);
-        for payload in log_match.matches {
-            println!("{} ", payload.join(" "));
-        }
-    }
+    let log_events = log_reader::extract(config_file, file);
+    println!("{:?}", log_events);
 }

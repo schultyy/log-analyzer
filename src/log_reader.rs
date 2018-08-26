@@ -1,58 +1,62 @@
 use config::{ConfigFile, ConfigStep};
 use regex::Regex;
 
-pub struct LogResults {
+#[derive(Debug)]
+pub struct LogEvent {
+    pub context_identifier: String,
     pub name: String,
-    pub results: Vec<LogMatch>
+    pub payload: Vec<String>
 }
 
-pub struct LogMatch {
-    pub name: String,
-    pub matches: Vec<Vec<String>>
-}
-
-fn extract_payload_from_line(log_line: &str, payload: &Vec<String>) -> Vec<String> {
-    let mut payload_results = vec!();
-
-    for payload_item in payload {
-        let re = Regex::new(payload_item).unwrap();
-        for capture in re.captures_iter(log_line) {
-            if capture[0].to_string().len() > 0 {
-                payload_results.push(capture[0].to_string());
+fn matches_context_argument(log_line: &str, compiled_context_expressions: &Vec<Regex>) -> Option<String> {
+    for compiled_context_expression in compiled_context_expressions {
+        if compiled_context_expression.is_match(log_line) {
+            for cap in compiled_context_expression.captures_iter(log_line) {
+                return Some(cap[1].to_string())
             }
         }
     }
-
-    payload_results
+    None
 }
 
-fn execute_step(config_step: &ConfigStep, log_file: &Vec<&str>) -> LogMatch {
-    let mut all_matches = vec!();
-    let config_identifier_regex = Regex::new(&config_step.identifier).unwrap();
-    for line in log_file {
-        if config_identifier_regex.is_match(line) {
-            let mut new_matches = extract_payload_from_line(line, &config_step.payload);
-            if new_matches.len() > 0 {
-                all_matches.push(new_matches);
-            }
+fn extract_payload(log_line: &str, config_step: &ConfigStep) -> Vec<String> {
+    let mut collected_payload = vec!();
+
+    for payload_item in &config_step.payload {
+        let compiled_payload_item = Regex::new(&payload_item).unwrap();
+        for capture in compiled_payload_item.captures_iter(log_line) {
+            collected_payload.push(capture[0].to_string());
         }
     }
-
-    LogMatch {
-        name: config_step.name.clone(),
-        matches: all_matches
-    }
+    collected_payload
 }
 
-pub fn extract(config_file: ConfigFile, log_file: String) -> LogResults {
-    let log_file_lines = log_file.split("\n").collect();
-    let mut matches = vec!();
+fn match_step_identifier(context_value: String, log_line: &str, config_file: &ConfigFile) -> Option<LogEvent> {
     for config_file_step in config_file.steps.iter() {
-        matches.push(execute_step(config_file_step, &log_file_lines));
+        let regex = Regex::new(&config_file_step.identifier).unwrap();
+        if regex.is_match(log_line) {
+            return Some(LogEvent {
+                context_identifier: context_value,
+                name: config_file_step.name.clone(),
+                payload: extract_payload(log_line, &config_file_step)
+            })
+        }
+    }
+    None
+}
+
+pub fn extract(config_file: ConfigFile, log_file: String) -> Vec<LogEvent> {
+    let mut log_events = Vec::new();
+    let log_file_lines = log_file.split("\n");
+    let compiled_context_expressions = config_file.context_arguments.iter().map(|context| Regex::new(&context).unwrap()).collect();
+
+    for log_line in log_file_lines {
+        if let Some(context_value) = matches_context_argument(&log_line, &compiled_context_expressions) {
+            if let Some(payload) = match_step_identifier(context_value, log_line, &config_file) {
+                log_events.push(payload);
+            }
+        }
     }
 
-    LogResults {
-        name: config_file.name,
-        results: matches
-    }
+    log_events
 }
