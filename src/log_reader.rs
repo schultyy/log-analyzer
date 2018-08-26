@@ -17,7 +17,9 @@ fn extract_payload_from_line(log_line: &str, payload: &Vec<String>) -> Vec<Strin
     for payload_item in payload {
         let re = Regex::new(payload_item).unwrap();
         for capture in re.captures_iter(log_line) {
-            payload_results.push(capture[0].to_string());
+            if capture[0].to_string().len() > 0 {
+                payload_results.push(capture[0].to_string());
+            }
         }
     }
 
@@ -30,7 +32,9 @@ fn execute_step(config_step: &ConfigStep, log_file: &Vec<&str>) -> LogMatch {
     for line in log_file {
         if config_identifier_regex.is_match(line) {
             let mut new_matches = extract_payload_from_line(line, &config_step.payload);
-            all_matches.push(new_matches);
+            if new_matches.len() > 0 {
+                all_matches.push(new_matches);
+            }
         }
     }
 
