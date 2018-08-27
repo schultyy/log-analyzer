@@ -97,5 +97,15 @@ fn main() {
                 println!("\n");
             }
         }
+    } else {
+        for (_context_identifier, log_events)  in aggregated.iter() {
+            for log_event in log_events {
+                println!("{} -- {} -- {}", &log_event.context_identifier, &log_event.date, &log_event.name);
+                for payload_item in &log_event.payload {
+                    print!(" {} ", payload_item);
+                }
+                println!("\n");
+            }
+        }
     }
 }
