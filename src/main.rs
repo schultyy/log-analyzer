@@ -36,6 +36,12 @@ fn main() {
                                .help("Sets the input file to use")
                                .required(true)
                                .index(1))
+                          .arg(Arg::with_name("filter")
+                                .short("f")
+                                .long("filter")
+                                .value_name("FILTER")
+                                .help("Filter aggregated logs by a certain value")
+                                .takes_value(true))
                           .subcommand(SubCommand::with_name("config")
                                       .arg(Arg::with_name("validate")
                                           .short("v")
@@ -80,5 +86,16 @@ fn main() {
 
     let log_events = log_reader::extract(config_file, file);
     let aggregated = aggregator::aggregate(log_events);
-    println!("{:?}", aggregated);
+
+    if let Some(filter_argument) = matches.value_of("filter") {
+        if let Some(log_events) = aggregated.get(filter_argument) {
+            for log_event in log_events {
+                println!("{} -- {} -- {}", &log_event.context_identifier, &log_event.date, &log_event.name);
+                for payload_item in &log_event.payload {
+                    print!(" {} ", payload_item);
+                }
+                println!("\n");
+            }
+        }
+    }
 }
