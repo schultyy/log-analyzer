@@ -6,6 +6,7 @@ extern crate regex;
 
 mod config;
 mod log_reader;
+mod aggregator;
 
 use std::io::Read;
 use std::fs::File;
@@ -78,5 +79,6 @@ fn main() {
     };
 
     let log_events = log_reader::extract(config_file, file);
-    println!("{:?}", log_events);
+    let aggregated = aggregator::aggregate(log_events);
+    println!("{:?}", aggregated);
 }
