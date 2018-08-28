@@ -54,7 +54,7 @@ fn match_step_identifier(date_identifier: &Regex, context_value: String, log_lin
     None
 }
 
-pub fn extract(config_file: ConfigFile, log_file: String) -> Vec<LogEvent> {
+pub fn extract(config_file: &ConfigFile, log_file: String) -> Vec<LogEvent> {
     let mut log_events = Vec::new();
     let log_file_lines = log_file.split("\n");
     let compiled_context_expressions = config_file.context_arguments.iter().map(|context| Regex::new(&context).unwrap()).collect();
