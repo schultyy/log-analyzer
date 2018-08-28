@@ -3,7 +3,7 @@ extern crate clap;
 extern crate serde;
 extern crate serde_json;
 extern crate regex;
-#[macro_use] extern crate itertools;
+extern crate itertools;
 
 mod config;
 mod log_reader;
