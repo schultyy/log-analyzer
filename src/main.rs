@@ -90,7 +90,7 @@ fn main() {
     if let Some(filter_argument) = matches.value_of("filter") {
         if let Some(log_events) = aggregated.get(filter_argument) {
             for log_event in log_events {
-                println!("{} -- {} -- {}", &log_event.context_identifier, &log_event.date, &log_event.name);
+                println!("{} -- {} -- {}", &log_event.date, &log_event.context_identifier, &log_event.name);
                 for payload_item in &log_event.payload {
                     print!(" {} ", payload_item);
                 }
@@ -100,7 +100,7 @@ fn main() {
     } else {
         for (_context_identifier, log_events)  in aggregated.iter() {
             for log_event in log_events {
-                println!("{} -- {} -- {}", &log_event.context_identifier, &log_event.date, &log_event.name);
+                println!("{} -- {} -- {}", &log_event.date, &log_event.context_identifier, &log_event.name);
                 for payload_item in &log_event.payload {
                     print!(" {} ", payload_item);
                 }
