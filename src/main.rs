@@ -129,8 +129,14 @@ fn main() {
                 }
             }
         } else {
-            for (_context_identifier, log_events)  in aggregated.iter() {
-                console::print_log_event(log_events);
+            for (context_identifier, log_events)  in aggregated.iter() {
+                if matches.is_present("validate-workflow") {
+                    println!("Validating {}", context_identifier);
+                    validate_workflow(log_events, &config_file);
+                    println!("\n");
+                } else {
+                    console::print_log_event(log_events);
+                }
             }
         }
     }
