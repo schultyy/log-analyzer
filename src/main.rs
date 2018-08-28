@@ -110,9 +110,9 @@ fn main() {
         if let Some(filter_argument) = matches.value_of("filter") {
             if let Some(log_events) = aggregated.get(filter_argument) {
                 if matches.is_present("validate-workflow") {
-                    match validator::validate_single(log_events, &config_file) {
-                        Ok(())   => println!("checks out"),
-                        Err(err) => println!("ERR: {}", err)
+                    let check_list_results = validator::validate_single(log_events, &config_file);
+                    for (config_step_name, value) in check_list_results.iter() {
+                        println!("Found: {} -- Config Step: {}", value, config_step_name);
                     }
                 } else {
                     console::print_log_event(log_events);
