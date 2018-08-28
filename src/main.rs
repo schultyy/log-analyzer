@@ -3,6 +3,7 @@ extern crate clap;
 extern crate serde;
 extern crate serde_json;
 extern crate regex;
+#[macro_use] extern crate itertools;
 
 mod config;
 mod log_reader;
@@ -14,6 +15,7 @@ use std::fs::File;
 use std::error::Error;
 
 use clap::{Arg, App, SubCommand};
+use itertools::Itertools;
 
 fn read_log_file(path: &str) -> Result<String, Box<Error>> {
     let mut file = File::open(path)?;
@@ -43,6 +45,10 @@ fn main() {
                                 .value_name("FILTER")
                                 .help("Filter aggregated logs by a certain value")
                                 .takes_value(true))
+                          .arg(Arg::with_name("context-identifier-only")
+                                    .long("context-ids-only")
+                                    .help("Prints out only the context identifier for each collection of events")
+                                    .takes_value(false))
                           .subcommand(SubCommand::with_name("config")
                                       .arg(Arg::with_name("validate")
                                           .short("v")
@@ -88,13 +94,19 @@ fn main() {
     let log_events = log_reader::extract(config_file, file);
     let aggregated = aggregator::aggregate(log_events);
 
-    if let Some(filter_argument) = matches.value_of("filter") {
-        if let Some(log_events) = aggregated.get(filter_argument) {
-            console::print_log_event(log_events);
+    if matches.is_present("context-identifier-only") {
+        for key in aggregated.keys().unique().collect::<Vec<_>>() {
+            println!("{}", key);
         }
     } else {
-        for (_context_identifier, log_events)  in aggregated.iter() {
-            console::print_log_event(log_events);
+        if let Some(filter_argument) = matches.value_of("filter") {
+            if let Some(log_events) = aggregated.get(filter_argument) {
+                console::print_log_event(log_events);
+            }
+        } else {
+            for (_context_identifier, log_events)  in aggregated.iter() {
+                console::print_log_event(log_events);
+            }
         }
     }
 }
