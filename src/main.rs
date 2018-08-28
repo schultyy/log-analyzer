@@ -16,7 +16,7 @@ use std::fs::File;
 use std::error::Error;
 
 use clap::{Arg, App, SubCommand};
-use itertools::Itertools;
+use itertools::{Itertools, any};
 
 fn read_log_file(path: &str) -> Result<String, Box<Error>> {
     let mut file = File::open(path)?;
@@ -29,6 +29,12 @@ fn validate_workflow(log_events: &Vec<log_reader::LogEvent>, config_file: &confi
     let check_list_results = validator::validate_single(log_events, &config_file);
     for (config_step_name, value) in check_list_results.iter() {
         println!("Found: {} -- Config Step: {}", value, config_step_name);
+    }
+
+    if any(check_list_results.values(), |value| value == &false) {
+        println!("Validation failed: Items are missing");
+    } else {
+        println!("Validation passed. No missing items");
     }
 }
 
