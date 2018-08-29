@@ -8,7 +8,7 @@ extern crate itertools;
 mod config;
 mod log_reader;
 mod aggregator;
-mod console;
+mod report;
 mod validator;
 
 use std::io::Read;
@@ -66,9 +66,13 @@ fn main() {
                                     .takes_value(false))
                           .arg(Arg::with_name("validate-workflow")
                                     .long("validate-workflow")
-                                    .help("validates if a log event complies to all steps from configuration file")
+                                    .help("Validates if a log event complies to all steps from configuration file")
                                     .takes_value(false)
                                     .conflicts_with("context-identifiers-only"))
+                          .arg(Arg::with_name("json-report")
+                                    .long("json-report")
+                                    .help("Generates a report in the JSON format")
+                                    .takes_value(false))
                           .subcommand(SubCommand::with_name("config")
                                       .arg(Arg::with_name("validate")
                                           .short("v")
@@ -111,6 +115,8 @@ fn main() {
         }
     };
 
+    let wants_json = matches.is_present("json-report");
+
     let log_events = log_reader::extract(&config_file, file);
     let aggregated = aggregator::aggregate(log_events);
 
@@ -125,7 +131,7 @@ fn main() {
                 if matches.is_present("validate-workflow") {
                     validate_workflow(log_events, &config_file);
                 } else {
-                    console::print_log_event(log_events);
+                    report::print_log_event(log_events, wants_json);
                 }
             }
         } else {
@@ -135,7 +141,7 @@ fn main() {
                     validate_workflow(log_events, &config_file);
                     println!("\n");
                 } else {
-                    console::print_log_event(log_events);
+                    report::print_log_event(log_events, wants_json);
                 }
             }
         }

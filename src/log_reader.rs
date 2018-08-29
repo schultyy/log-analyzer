@@ -1,7 +1,7 @@
 use config::{ConfigFile, ConfigStep};
 use regex::Regex;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct LogEvent {
     pub date: String,
     pub context_identifier: String,
