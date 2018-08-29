@@ -14,9 +14,10 @@ mod validator;
 use std::io::Read;
 use std::fs::File;
 use std::error::Error;
+use std::collections::HashMap;
 
 use clap::{Arg, App, SubCommand};
-use itertools::{Itertools, any};
+use itertools::Itertools;
 
 fn read_log_file(path: &str) -> Result<String, Box<Error>> {
     let mut file = File::open(path)?;
@@ -25,17 +26,17 @@ fn read_log_file(path: &str) -> Result<String, Box<Error>> {
     Ok(contents)
 }
 
-fn validate_workflow(log_events: &Vec<log_reader::LogEvent>, config_file: &config::ConfigFile) {
-    let check_list_results = validator::validate_single(log_events, &config_file);
-    for (config_step_name, value) in check_list_results.iter() {
-        println!("Found: {} -- Config Step: {}", value, config_step_name);
+fn validate_workflow_for_file(aggregated: HashMap<String, Vec<log_reader::LogEvent>>, config_file: &config::ConfigFile, wants_json: bool) {
+    let mut validation_results : HashMap<String, HashMap<String, bool>> = HashMap::new();
+    for (context_identifier, log_events) in aggregated {
+        validation_results.insert(context_identifier, validator::validate_single(&log_events, &config_file));
     }
+    report::print_workflow_results_for_all_checklists(validation_results, wants_json);
+}
 
-    if any(check_list_results.values(), |value| value == &false) {
-        println!("Validation failed: Items are missing");
-    } else {
-        println!("Validation passed. No missing items");
-    }
+fn validate_workflow_for_single_context_id(log_events: &Vec<log_reader::LogEvent>, config_file: &config::ConfigFile, wants_json: bool) {
+    let check_list_results = validator::validate_single(log_events, &config_file);
+    report::print_workflow_results_for_single_checklist(check_list_results, wants_json);
 }
 
 fn main() {
@@ -123,31 +124,28 @@ fn main() {
     if matches.is_present("context-identifier-only") {
         let ids = aggregated.keys().unique().collect::<Vec<_>>();
         if wants_json {
-            let json_str = serde_json::to_string_pretty(&ids).expect("Failed to serialize Ids to JSON");
-            println!("{}", json_str);
+            report::print_json(ids);
         } else {
             for key in ids {
                 println!("{}", key);
             }
         }
-
     }
     else {
         if let Some(filter_argument) = matches.value_of("filter") {
             if let Some(log_events) = aggregated.get(filter_argument) {
                 if matches.is_present("validate-workflow") {
-                    validate_workflow(log_events, &config_file);
+                    validate_workflow_for_single_context_id(log_events, &config_file, wants_json);
                 } else {
                     report::print_log_event(log_events, wants_json);
                 }
             }
         } else {
-            for (context_identifier, log_events)  in aggregated.iter() {
-                if matches.is_present("validate-workflow") {
-                    println!("Validating {}", context_identifier);
-                    validate_workflow(log_events, &config_file);
-                    println!("\n");
-                } else {
+            if matches.is_present("validate-workflow") {
+                validate_workflow_for_file(aggregated, &config_file, wants_json);
+                println!("\n");
+            } else {
+                for (_context_identifier, log_events)  in aggregated.iter() {
                     report::print_log_event(log_events, wants_json);
                 }
             }
