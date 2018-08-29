@@ -121,9 +121,16 @@ fn main() {
     let aggregated = aggregator::aggregate(log_events);
 
     if matches.is_present("context-identifier-only") {
-        for key in aggregated.keys().unique().collect::<Vec<_>>() {
-            println!("{}", key);
+        let ids = aggregated.keys().unique().collect::<Vec<_>>();
+        if wants_json {
+            let json_str = serde_json::to_string_pretty(&ids).expect("Failed to serialize Ids to JSON");
+            println!("{}", json_str);
+        } else {
+            for key in ids {
+                println!("{}", key);
+            }
         }
+
     }
     else {
         if let Some(filter_argument) = matches.value_of("filter") {
