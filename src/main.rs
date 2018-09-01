@@ -11,26 +11,14 @@ mod aggregator;
 mod report;
 mod validator;
 
-use std::io::Read;
-use std::fs::File;
-use std::error::Error;
 use std::collections::HashMap;
-use std::path::Path;
 
 use clap::{Arg, App, SubCommand};
 use itertools::Itertools;
 
-fn read_log_file(path: &str) -> Result<String, Box<Error>> {
-    let canonical_path = Path::new(path).canonicalize()?;
-    let mut file = File::open(canonical_path.as_path())?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents)
-}
-
-fn validate_workflow_for_file(aggregated: HashMap<String, Vec<log_reader::LogEvent>>, config_file: &config::ConfigFile, wants_json: bool) {
+fn validate_workflow_for_file(aggregated_logs: aggregator::AggregatedLogs, config_file: &config::ConfigFile, wants_json: bool) {
     let mut validation_results : HashMap<String, HashMap<String, bool>> = HashMap::new();
-    for (context_identifier, log_events) in aggregated {
+    for (context_identifier, log_events) in aggregated_logs.events_by_context_id {
         validation_results.insert(context_identifier, validator::validate_single(&log_events, &config_file));
     }
     report::print_workflow_results_for_all_checklists(validation_results, wants_json);
@@ -102,14 +90,6 @@ fn main() {
     let input_file_path = matches.value_of("INPUT").unwrap();
     println!("Using input file: {}", input_file_path);
 
-    let file = match read_log_file(input_file_path) {
-        Ok(f) => f,
-        Err(err) => {
-            println!("{:?}", err);
-            return;
-        }
-    };
-
     let config_file = match config::read_config_from_file(config_filename) {
         Ok(c) => c,
         Err(err) => {
@@ -120,11 +100,17 @@ fn main() {
 
     let wants_json = matches.is_present("json-report");
 
-    let log_events = log_reader::extract(&config_file, file);
-    let aggregated = aggregator::aggregate(log_events);
+    let log_results = match log_reader::extract(&config_file, input_file_path) {
+        Ok(results) => results,
+        Err(err) => {
+            println!("ERR: {:?}", err);
+            return;
+        }
+    };
+    let aggregated = aggregator::aggregate(log_results);
 
     if matches.is_present("context-identifier-only") {
-        let ids = aggregated.keys().unique().collect::<Vec<_>>();
+        let ids = aggregated.events_by_context_id.keys().unique().collect::<Vec<_>>();
         if wants_json {
             report::print_json(ids);
         } else {
@@ -135,7 +121,7 @@ fn main() {
     }
     else {
         if let Some(filter_argument) = matches.value_of("filter") {
-            if let Some(log_events) = aggregated.get(filter_argument) {
+            if let Some(log_events) = aggregated.events_by_context_id.get(filter_argument) {
                 if matches.is_present("validate-workflow") {
                     validate_workflow_for_single_context_id(log_events, &config_file, wants_json);
                 } else {
@@ -147,7 +133,7 @@ fn main() {
                 validate_workflow_for_file(aggregated, &config_file, wants_json);
                 println!("\n");
             } else {
-                for (_context_identifier, log_events)  in aggregated.iter() {
+                for (_context_identifier, log_events)  in aggregated.events_by_context_id.iter() {
                     report::print_log_event(log_events, wants_json);
                 }
             }

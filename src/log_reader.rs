@@ -1,5 +1,16 @@
+use std::io::Read;
+use std::fs::File;
+use std::error::Error;
+use std::path::Path;
+
 use config::{ConfigFile, ConfigStep};
 use regex::Regex;
+
+#[derive(Debug, Serialize)]
+pub struct LogResults {
+    pub log_filename: String,
+    pub events: Vec<LogEvent>
+}
 
 #[derive(Debug, Serialize)]
 pub struct LogEvent {
@@ -54,7 +65,16 @@ fn match_step_identifier(date_identifier: &Regex, context_value: String, log_lin
     None
 }
 
-pub fn extract(config_file: &ConfigFile, log_file: String) -> Vec<LogEvent> {
+fn read_log_file(path: &str) -> Result<String, Box<Error>> {
+    let canonical_path = Path::new(path).canonicalize()?;
+    let mut file = File::open(canonical_path.as_path())?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
+pub fn extract(config_file: &ConfigFile, log_file_path: &str) -> Result<LogResults, Box<Error>> {
+    let log_file = read_log_file(log_file_path)?;
     let mut log_events = Vec::new();
     let log_file_lines = log_file.split("\n");
     let compiled_context_expressions = config_file.context_arguments.iter().map(|context| Regex::new(&context).unwrap()).collect();
@@ -68,5 +88,8 @@ pub fn extract(config_file: &ConfigFile, log_file: String) -> Vec<LogEvent> {
         }
     }
 
-    log_events
+    Ok(LogResults {
+        log_filename: log_file_path.to_string(),
+        events: log_events
+    })
 }
