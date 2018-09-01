@@ -11,23 +11,8 @@ mod aggregator;
 mod report;
 mod validator;
 
-use std::collections::HashMap;
-
 use clap::{Arg, App, SubCommand};
 use itertools::Itertools;
-
-fn validate_workflow_for_file(aggregated_logs: aggregator::AggregatedLogs, config_file: &config::ConfigFile, wants_json: bool) {
-    let mut validation_results : HashMap<String, HashMap<String, bool>> = HashMap::new();
-    for (context_identifier, log_events) in aggregated_logs.events_by_context_id {
-        validation_results.insert(context_identifier, validator::validate_single(&log_events, &config_file));
-    }
-    report::print_workflow_results_for_all_checklists(validation_results, wants_json);
-}
-
-fn validate_workflow_for_single_context_id(log_events: &Vec<log_reader::LogEvent>, config_file: &config::ConfigFile, wants_json: bool) {
-    let check_list_results = validator::validate_single(log_events, &config_file);
-    report::print_workflow_results_for_single_checklist(check_list_results, wants_json);
-}
 
 fn main() {
     let matches = App::new("Log Analyzer")
@@ -123,14 +108,16 @@ fn main() {
         if let Some(filter_argument) = matches.value_of("filter") {
             if let Some(log_events) = aggregated.events_by_context_id.get(filter_argument) {
                 if matches.is_present("validate-workflow") {
-                    validate_workflow_for_single_context_id(log_events, &config_file, wants_json);
+                    let validation_results = validator::validate_workflow_for_single_context_id(log_events, &config_file);
+                    report::print_workflow_results_for_single_checklist(validation_results, wants_json);
                 } else {
                     report::print_log_event(log_events, wants_json);
                 }
             }
         } else {
             if matches.is_present("validate-workflow") {
-                validate_workflow_for_file(aggregated, &config_file, wants_json);
+                let validation_results = validator::validate_workflow_for_file(aggregated, &config_file);
+                report::print_workflow_results_for_all_checklists(validation_results, wants_json);
                 println!("\n");
             } else {
                 for (_context_identifier, log_events)  in aggregated.events_by_context_id.iter() {
