@@ -8,14 +8,23 @@ use log_reader;
 
 #[derive(Debug, Serialize)]
 pub struct ValidationResults {
-    log_filename: String,
-    validation_results: HashMap<String, HashMap<String, bool>>
+    pub log_filename: String,
+    pub validation_results: Vec<ValidationResult>
+}
+
+#[derive(Debug, Serialize)]
+pub struct ValidationResult {
+    pub context_identifier: String,
+    pub results: HashMap<String, bool>
 }
 
 pub fn validate_workflow_for_file(aggregated_logs: aggregator::AggregatedLogs, config_file: &config::ConfigFile) -> ValidationResults {
-    let mut validation_results : HashMap<String, HashMap<String, bool>> = HashMap::new();
+    let mut validation_results = Vec::new();
     for (context_identifier, log_events) in aggregated_logs.events_by_context_id {
-        validation_results.insert(context_identifier, validate_single(&log_events, &config_file));
+        validation_results.push(ValidationResult {
+            context_identifier: context_identifier,
+            results: validate_single(&log_events, &config_file)
+        });
     }
 
     ValidationResults {
@@ -26,11 +35,12 @@ pub fn validate_workflow_for_file(aggregated_logs: aggregator::AggregatedLogs, c
 
 pub fn validate_workflow_for_single_context_id(log_filename: String, log_events: &Vec<log_reader::LogEvent>, config_file: &config::ConfigFile) -> ValidationResults {
     let validation_results_for_single_id = validate_single(log_events, &config_file);
-
-    let mut validation_results = HashMap::new();
-
+    let mut validation_results = Vec::new();
     if log_events.len() > 0 {
-        validation_results.insert(log_events[0].context_identifier.to_string(), validation_results_for_single_id);
+        validation_results.push(ValidationResult{
+            context_identifier: log_events[0].context_identifier.to_string(),
+            results: validation_results_for_single_id
+        });
     }
 
     ValidationResults {
