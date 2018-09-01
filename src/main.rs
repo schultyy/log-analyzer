@@ -45,10 +45,6 @@ fn main() {
                                     .help("Validates if a log event complies to all steps from configuration file")
                                     .takes_value(false)
                                     .conflicts_with("context-identifiers-only"))
-                          .arg(Arg::with_name("json-report")
-                                    .long("json-report")
-                                    .help("Generates a report in the JSON format")
-                                    .takes_value(false))
                           .subcommand(SubCommand::with_name("config")
                                       .arg(Arg::with_name("validate")
                                           .short("v")
@@ -83,8 +79,6 @@ fn main() {
         }
     };
 
-    let wants_json = matches.is_present("json-report");
-
     let log_results = match log_reader::extract(&config_file, input_file_path) {
         Ok(results) => results,
         Err(err) => {
@@ -96,33 +90,25 @@ fn main() {
 
     if matches.is_present("context-identifier-only") {
         let ids = aggregated.events_by_context_id.keys().unique().collect::<Vec<_>>();
-        if wants_json {
-            report::print_json(ids);
-        } else {
-            for key in ids {
-                println!("{}", key);
-            }
-        }
+        report::print_json(ids);
     }
     else {
         if let Some(filter_argument) = matches.value_of("filter") {
             if let Some(log_events) = aggregated.events_by_context_id.get(filter_argument) {
                 if matches.is_present("validate-workflow") {
-                    let validation_results = validator::validate_workflow_for_single_context_id(log_events, &config_file);
-                    report::print_workflow_results_for_single_checklist(validation_results, wants_json);
+                    let validation_results = validator::validate_workflow_for_single_context_id(aggregated.log_filename, log_events, &config_file);
+                    report::print_json(validation_results);
                 } else {
-                    report::print_log_event(log_events, wants_json);
+                    report::print_json(log_events);
                 }
             }
         } else {
             if matches.is_present("validate-workflow") {
                 let validation_results = validator::validate_workflow_for_file(aggregated, &config_file);
-                report::print_workflow_results_for_all_checklists(validation_results, wants_json);
+                report::print_json(validation_results);
                 println!("\n");
             } else {
-                for (_context_identifier, log_events)  in aggregated.events_by_context_id.iter() {
-                    report::print_log_event(log_events, wants_json);
-                }
+                report::print_json(aggregated);
             }
         }
     }
