@@ -15,12 +15,14 @@ use std::io::Read;
 use std::fs::File;
 use std::error::Error;
 use std::collections::HashMap;
+use std::path::Path;
 
 use clap::{Arg, App, SubCommand};
 use itertools::Itertools;
 
 fn read_log_file(path: &str) -> Result<String, Box<Error>> {
-    let mut file = File::open(path)?;
+    let canonical_path = Path::new(path).canonicalize()?;
+    let mut file = File::open(canonical_path.as_path())?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     Ok(contents)

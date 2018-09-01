@@ -19,8 +19,9 @@ pub struct ConfigStep {
     pub payload: Vec<String>
 }
 
-pub fn read_config_from_file<P: AsRef<Path>>(path: P) -> Result<ConfigFile, Box<Error>> {
-    let file = File::open(path)?;
+pub fn read_config_from_file(path: &str) -> Result<ConfigFile, Box<Error>> {
+    let canonical_path = Path::new(&path).canonicalize()?;
+    let file = File::open(canonical_path)?;
     let config_file = serde_json::from_reader(file)?;
     Ok(config_file)
 }
